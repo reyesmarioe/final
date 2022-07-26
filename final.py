@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import ttk
 from tkcalendar import *
 import sys
+import os.path
+import json
 
 
 sys.path.append('libs')
@@ -54,6 +56,7 @@ class MainApp:
 
 
     def capture_expense(self):
+        fileInit = False
         d = {}
         expense = self.combo_get_sel_item()
         amount = 100.00
@@ -63,15 +66,45 @@ class MainApp:
         #print(date)
         d[expense] = amount
 
-        self.ef = self.jp.load_json('expenses.json')
-        if date in self.ef:
-            print(self.ef)
-
-        self.ef[date] = d
-
-        self.ef[expense] = amount
-        self.jp.write_section('expenses.json', self.ef)
+        expensesFile = 'expenses.json'
+        if os.path.exists(expensesFile):
+            self.ef = self.jp.load_json('expenses.json')
+            if date in self.ef:
+                self.ef[date].update({expense:amount})
+            else:
+                self.ef[date] = {expense:amount}
             
+
+            print(self.ef)
+        else:
+            initDict = {}
+            fileInit = True
+            #self.ef = open(expensesFile, 'w')
+
+            initDict[date] = d
+            initDict[date][expense] = amount
+            #self.ef.write(json.dumpinitDict)
+            self.jp.write_section(expensesFile, initDict)
+            
+        if not fileInit:
+            self.jp.write_section('expenses.json', self.ef)
+        else:
+            pass
+            #self.ef.close()
+            
+    def get_expense(self):
+        d = {}
+        expense = self.combo_get_sel_item()
+        date = str(self.cal.get_date())
+        date = date.replace('/', '_')
+
+        self.ef = self.jp.load_json('expenses.json')
+        print('in get', self.ef)
+        if date in self.ef:
+            print(self.ef[date])
+        else:
+            print('No expense found for this day: ' + date)
+
 
 
 #lbl = Label(window, text="Hello")
@@ -100,7 +133,7 @@ if __name__ == '__main__':
     app = MainApp()
     app.create_main_window(800, 650, 'Expense tracker')
     app.create_calendar()
-    app.create_button('Get daily expense', app.get_date)
+    app.create_button('Get daily expense', app.get_expense)
     app.create_button('Set daily expense', app.capture_expense)
     app.create_combo(expense_types)
     app.main_loop()

@@ -1,3 +1,4 @@
+import os.path
 
 class MyUtils:
     def __init__(self):
@@ -11,4 +12,8 @@ class MyUtils:
 
         except Exception as e:
             raise(e)
+
+    def file_exists(self, fileName):
+        return os.path.exists(fileName)
+
 

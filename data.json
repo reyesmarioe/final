@@ -1,0 +1,8 @@
+{
+	"settings"	:	{
+		"daily_limit"	:	200
+	},
+	"expense_types"	:	[
+		"Food", "Clothes", "Rent", "Health", "Gas"
+	]
+}

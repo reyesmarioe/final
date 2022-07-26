@@ -12,8 +12,7 @@ from my_utils import MyUtils
 class MainApp:
     def __init__(self):
         self.jp = JsonParser()
-        self.utils = MyUtils()
-        self.utils.touch_file('expenses.json', 'a+')
+        #self.utils = MyUtils()
 
 
     def create_main_window(self, width, height, title = 'Some App'):
@@ -61,14 +60,17 @@ class MainApp:
 
         date = str(self.cal.get_date())
         date = date.replace('/', '_')
-        print(date)
+        #print(date)
         d[expense] = amount
 
         self.ef = self.jp.load_json('expenses.json')
-        print(type(self.ef))
-        print(self.ef)
+        if date in self.ef:
+            print(self.ef)
+
+        self.ef[date] = d
+
         self.ef[expense] = amount
-        print(self.ef)
+        self.jp.write_section('expenses.json', self.ef)
             
 
 

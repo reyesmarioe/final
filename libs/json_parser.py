@@ -15,8 +15,11 @@ class JsonParser:
         except Exception as e:
             raise(e)
 
-    def write_section(self, fileName, section = None):
-        jd = self.load_json(fileName)
+    def write_section(self, fileName, data):
 
-        if section in jd:
-            print('Section found')
+        try:
+            with open(fileName, 'w') as jf:
+                jf.write(json.dumps(data))
+
+        except Exception as e:
+            raise(e)

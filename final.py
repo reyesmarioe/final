@@ -1,6 +1,6 @@
-from tkinter import *
-from tkinter import ttk
-from tkcalendar import *
+#from tkinter import *
+#from tkinter import ttk
+#from tkcalendar import *
 import sys
 import os.path
 import json
@@ -9,8 +9,10 @@ import json
 sys.path.append('libs')
 from json_parser import JsonParser
 from my_utils import MyUtils
+from my_widgets import MainApp
 
 
+'''
 class MainApp:
     def __init__(self):
         self.jp = JsonParser()
@@ -38,8 +40,6 @@ class MainApp:
         print(self.date)
         expense = self.combo_get_sel_item()
         print('Daily expense for day : ' + self.date + ' for ' + expense + ' is ')
-
-
 
     def create_button(self, txt, func):
         self.btn = Button(self.window, text=txt, command=lambda: func())
@@ -104,23 +104,7 @@ class MainApp:
             print(self.ef[date])
         else:
             print('No expense found for this day: ' + date)
-
-
-
-#lbl = Label(window, text="Hello")
-
-#lbl.grid(column=0, row=0)
-
-
-#combo = ttk.Combobox(window)
-
-#combo['values']= (1, 2, 3, 4, 5, "Text")
-
-#combo.current(1) #set the selected item
-
-#combo.grid(column=0, row=0)
-# Add Calendar
-
+'''
 
 if __name__ == '__main__':
     # Instance of parse
@@ -132,8 +116,12 @@ if __name__ == '__main__':
 
     app = MainApp()
     app.create_main_window(800, 650, 'Expense tracker')
+    app.create_app_gui()
+    '''
     app.create_calendar()
     app.create_button('Get daily expense', app.get_expense)
     app.create_button('Set daily expense', app.capture_expense)
     app.create_combo(expense_types)
+    '''
+
     app.main_loop()

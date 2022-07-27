@@ -9,14 +9,15 @@ from json_parser import JsonParser
 
 class MainApp:
     def __init__(self):
+        self.file_expenses = 'expenses.json'
+        self.file_data = 'data.json'
         self.jp = JsonParser()
-        self.settings = self.jp.load_json('data.json', 'settings')
-        self.expense_types = self.jp.load_json('data.json', 'expense_types')
+        self.settings = self.jp.load_json(self.file_data, 'settings')
+        self.expense_types = self.jp.load_json(self.file_data, 'expense_types')
 
 
     def get_daily_limit(self):
-        print('Daily limit : ',  float(self.settings['daily_limit']))
-        return float(self.settings['daily_limit'])
+        return int(self.settings['daily_limit'])
 
     def create_main_window(self, width, height, title = 'Some App'):
         #print('create_main_window')
@@ -54,18 +55,40 @@ class MainApp:
     def combo_get_sel_item(self):
         return self.combo['values'][self.combo.current()]
 
-    def create_input_text(self, container, w = 30, h = 1):
+    def create_input_expense_text(self, container, w = 30, h = 1):
         self.txtExpense = tk.Text(container, height = h, width = w)
         self.txtExpense.grid(row=0, column=1, sticky='NW', padx=10, pady=10)
 
-    def calculate_daily_total(self, expensesDay):
-        dailyTotal = 0
-        for k,v in expensesDay.items():
-            #print(k, v)
-            dailyTotal += float(v)
+    def create_display_expense_text(self, container, w = 30, h = 1):
+        self.txtDisplayExpense = tk.Text(container, height = h, width = w)
+        self.txtDisplayExpense.grid(row=0, column=1, sticky='NW', padx=10, pady=10)
 
+    def create_display_limit_text(self, container, w = 30, h = 1):
+        self.txtDisplayLimit = tk.Text(container, height = h, width = w)
+        self.txtDisplayLimit.grid(row=2, column=1, sticky='NW', padx=10, pady=10)
+
+    def calculate_daily_total(self, expenses, day):
+        print(expenses)
+        dailyTotal = 0
+        if day not in expenses:
+            return dailyTotal 
+
+        for k,v in expenses[day].items():
+            dailyTotal += int(v)
+
+        print('Daily ', dailyTotal)
         return dailyTotal
 
+    def calculate_daily_total_from_file(self, date):
+        date = date.replace('/', '_')
+        if os.path.exists(self.file_expenses):
+            ef = self.jp.load_json(self.file_expenses)
+            dailyTotal = self.calculate_daily_total(ef,date)
+        else:
+            dailyTotal = 0
+
+        print('Calculate daily : ', dailyTotal)
+        return str(dailyTotal)
 
     def capture_expense(self):
         fileInit = False
@@ -80,37 +103,43 @@ class MainApp:
         #print(date)
         d[expense] = amount
 
-        expensesFile = 'expenses.json'
-        if os.path.exists(expensesFile):
-            self.ef = self.jp.load_json('expenses.json')
+        if os.path.exists(self.file_expenses):
+            self.ef = self.jp.load_json(self.file_expenses)
             if date in self.ef:
                 self.ef[date].update({expense:amount})
             else:
                 self.ef[date] = {expense:amount}
-            
-
-            #print(self.ef)
         else:
             initDict = {}
             fileInit = True
-            #self.ef = open(expensesFile, 'w')
 
             initDict[date] = d
             initDict[date][expense] = amount
-            #self.ef.write(json.dumpinitDict)
             self.jp.write_section(expensesFile, initDict)
             
-        print('Daily total ', self.calculate_daily_total(self.ef[date]))
-        if math.isclose(self.get_daily_limit(), self.calculate_daily_total(self.ef[date])):
+        t = self.get_daily_limit()
+        e = self.calculate_daily_total(self.ef,date)
+        print(t, e)
+        if t < e:
+            print(t, e)
+        else:
+            print("NOOOO")
+
+        print('Daily total ', self.calculate_daily_total(self.ef,date))
+        if self.get_daily_limit() >  self.calculate_daily_total(self.ef,date):
             print('You are OK')
         else:
             print('You have no more money!!!')
 
         if not fileInit:
-            self.jp.write_section('expenses.json', self.ef)
+            self.jp.write_section(self.file_expenses, self.ef)
         else:
             pass
-            #self.ef.close()
+        self.display_expenses()
+        
+    def display_expenses(self):
+        self.txtDisplayExpense.delete(1.0, END)
+        self.txtDisplayExpense.insert(tk.END, self.calculate_daily_total_from_file(self.calendar.get_date()))
             
     def get_expense(self):
         d = {}
@@ -118,8 +147,7 @@ class MainApp:
         date = str(self.calendar.get_date())
         date = date.replace('/', '_')
 
-        self.ef = self.jp.load_json('expenses.json')
-        #print('in get', self.ef)
+        self.ef = self.jp.load_json(self.file_expenses)
         if date in self.ef:
             print(self.ef[date])
         else:
@@ -141,6 +169,8 @@ class MainApp:
         self.calendar = Calendar(container, mode = 'day', DAY = 1, MONTH = 1, YEAR = 2000)
         self.calendar.pack(padx = 10, pady = 10, fill = 'both', expand = True)
 
+    def create_text_label(self, container, msg):
+        return Label(container, textvariable=msg, relief=RAISED)
 
     def create_app_gui(self):
         self.create_caledar_frame(self.window)
@@ -157,8 +187,33 @@ class MainApp:
         # Combo box 
         self.create_combo(self.frameSetExpenses, self.expense_types)
 
-        self.create_input_text(self.frameSetExpenses)
+        # Expense input text
+        self.create_input_expense_text(self.frameSetExpenses)
 
-        self.btnGetExpenses = self.create_button(self.frameSetExpenses, 'Enter Expense', self.capture_expense) 
+        
+        self.btnSetExpenses = self.create_button(self.frameSetExpenses, 'Enter Expense', self.capture_expense) 
+        self.btnSetExpenses.grid(row=18, column=0, padx=10, pady=10)
+
+
+        self.msgDailyExpense = StringVar()
+        self.lblDailyExpense = self.create_text_label(self.frameGetExpenses, self.msgDailyExpense)
+        self.msgDailyExpense.set('Daily Expense : ')
+        self.lblDailyExpense.grid(row=0, column=0, padx=10, pady=10)
+        
+
+        # Get expenses
+        self.create_display_expense_text(self.frameGetExpenses, 20)
+        self.txtDisplayExpense.insert(tk.END, self.calculate_daily_total_from_file(self.calendar.get_date()))
+
+        self.msgDailyLimit = StringVar()
+        self.lblDailyLimit = self.create_text_label(self.frameGetExpenses, self.msgDailyLimit)
+        self.msgDailyLimit.set('Daily Limit : ')
+        self.lblDailyLimit.grid(row=2, column=0, padx=0, pady=0)
+        
+
+        self.create_display_limit_text(self.frameGetExpenses, 20)
+        self.txtDisplayLimit.insert(tk.END, self.get_daily_limit())
+
+
+        self.btnGetExpenses = self.create_button(self.frameGetExpenses, 'Get Expenses', self.display_expenses) 
         self.btnGetExpenses.grid(row=18, column=0, padx=10, pady=10)
-

@@ -45,7 +45,7 @@ class MainApp:
 
     def create_button(self, container, txt, func):
         return Button(container, text=txt, command=lambda: func())
-       
+
     def create_combo(self, container, items):
         self.combo = ttk.Combobox(container)
         self.combo['values'] = items
@@ -59,6 +59,11 @@ class MainApp:
         self.txtExpense = tk.Text(container, height = h, width = w)
         self.txtExpense.grid(row=0, column=1, sticky='NW', padx=10, pady=10)
 
+    def create_display_info_text(self, container, w = 30, h = 1):
+        self.txtInfo = tk.Text(container, height = h, width = w)
+        #self.txtInfo.grid(row=4, column=0, sticky='NW', padx=10, pady=10)
+        self.txtInfo.grid(row=4, column=1, padx=10, pady=10)
+
     def create_display_expense_text(self, container, w = 30, h = 1):
         self.txtDisplayExpense = tk.Text(container, height = h, width = w)
         self.txtDisplayExpense.grid(row=0, column=1, sticky='NW', padx=10, pady=10)
@@ -71,7 +76,7 @@ class MainApp:
         print(expenses)
         dailyTotal = 0
         if day not in expenses:
-            return dailyTotal 
+            return dailyTotal
 
         for k,v in expenses[day].items():
             dailyTotal += int(v)
@@ -94,17 +99,26 @@ class MainApp:
         fileInit = False
         d = {}
         expense = self.combo_get_sel_item()
-        amount = self.txtExpense.get('1.0', END).strip('\n\r')
-        print(amount)
-        #amount = 100.00
+        amount = int(self.txtExpense.get('1.0', END).strip('\n\r'))
 
         date = str(self.calendar.get_date())
         date = date.replace('/', '_')
         #print(date)
         d[expense] = amount
 
+        self.txtInfo.delete(1.0, END)
         if os.path.exists(self.file_expenses):
             self.ef = self.jp.load_json(self.file_expenses)
+            # Verify daily limit
+            print('Daily total ', self.calculate_daily_total(self.ef,date))
+            dt = self.calculate_daily_total(self.ef,date)
+
+            if self.get_daily_limit() < amount:
+                print ('Trying to spend more than your daily limit')
+                self.txtInfo.delete(1.0, END)
+                self.txtInfo.insert(tk.END, 'Trying to spend more than your daily limit')
+                return
+
             if date in self.ef:
                 self.ef[date].update({expense:amount})
             else:
@@ -115,32 +129,25 @@ class MainApp:
 
             initDict[date] = d
             initDict[date][expense] = amount
-            self.jp.write_section(expensesFile, initDict)
-            
-        t = self.get_daily_limit()
-        e = self.calculate_daily_total(self.ef,date)
-        print(t, e)
-        if t < e:
-            print(t, e)
-        else:
-            print("NOOOO")
+            if amount > self.get_daily_limit():
+                self.txtInfo.delete(1.0, END)
+                self.txtInfo.insert(tk.END, 'Trying to spend more than your daily limit')
+                print ('Trying to spend more than your daily limit')
+                return
 
-        print('Daily total ', self.calculate_daily_total(self.ef,date))
-        if self.get_daily_limit() >  self.calculate_daily_total(self.ef,date):
-            print('You are OK')
-        else:
-            print('You have no more money!!!')
+            self.jp.write_section(self.file_expenses, initDict)
+
 
         if not fileInit:
             self.jp.write_section(self.file_expenses, self.ef)
         else:
             pass
         self.display_expenses()
-        
+
     def display_expenses(self):
         self.txtDisplayExpense.delete(1.0, END)
         self.txtDisplayExpense.insert(tk.END, self.calculate_daily_total_from_file(self.calendar.get_date()))
-            
+
     def get_expense(self):
         d = {}
         expense = self.combo_get_sel_item()
@@ -177,31 +184,33 @@ class MainApp:
 
         # To enter expenses
         self.window.update_idletasks()
-        self.frameSetExpenses = self.create_label_frame(self.window, 'Enter Expenses', (self.window.winfo_width() - 20) / 2, 700)
+        self.frameSetExpenses = self.create_label_frame(self.window, 'Enter Expenses', (self.window.winfo_width() - 20) / 2, 400)
         self.frameSetExpenses.pack(padx = 10, pady = 10, side = LEFT)
 
         # To get expenses
-        self.frameGetExpenses = self.create_label_frame(self.window, 'Daily Expenses', (self.window.winfo_width() - 20) / 2, 700)
+        self.frameGetExpenses = self.create_label_frame(self.window, 'Daily Expenses', (self.window.winfo_width() - 20) / 2, 400)
         self.frameGetExpenses.pack(padx = 10, pady = 10, side = RIGHT)
 
-        # Combo box 
+        # Combo box
         self.create_combo(self.frameSetExpenses, self.expense_types)
 
         # Expense input text
         self.create_input_expense_text(self.frameSetExpenses)
 
-        
-        self.btnSetExpenses = self.create_button(self.frameSetExpenses, 'Enter Expense', self.capture_expense) 
-        self.btnSetExpenses.grid(row=18, column=0, padx=10, pady=10)
+
+        self.btnSetExpenses = self.create_button(self.frameSetExpenses, 'Enter Expense', self.capture_expense)
+        self.btnSetExpenses.grid(row=1, column=0, padx=10, pady=10)
+
+        self.create_display_info_text(self.frameSetExpenses, 30, 12)
 
 
+        # Get expenses
         self.msgDailyExpense = StringVar()
         self.lblDailyExpense = self.create_text_label(self.frameGetExpenses, self.msgDailyExpense)
         self.msgDailyExpense.set('Daily Expense : ')
         self.lblDailyExpense.grid(row=0, column=0, padx=10, pady=10)
-        
 
-        # Get expenses
+
         self.create_display_expense_text(self.frameGetExpenses, 20)
         self.txtDisplayExpense.insert(tk.END, self.calculate_daily_total_from_file(self.calendar.get_date()))
 
@@ -209,11 +218,12 @@ class MainApp:
         self.lblDailyLimit = self.create_text_label(self.frameGetExpenses, self.msgDailyLimit)
         self.msgDailyLimit.set('Daily Limit : ')
         self.lblDailyLimit.grid(row=2, column=0, padx=0, pady=0)
-        
+
 
         self.create_display_limit_text(self.frameGetExpenses, 20)
         self.txtDisplayLimit.insert(tk.END, self.get_daily_limit())
 
 
-        self.btnGetExpenses = self.create_button(self.frameGetExpenses, 'Get Expenses', self.display_expenses) 
+        self.btnGetExpenses = self.create_button(self.frameGetExpenses, 'Get Expenses', self.display_expenses)
         self.btnGetExpenses.grid(row=18, column=0, padx=10, pady=10)
+
